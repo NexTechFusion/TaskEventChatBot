@@ -4,7 +4,7 @@ import { chatApi, Task } from '@/lib/api';
 export interface LocalTask {
   id: string;
   text: string;
-  completed: boolean;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   priority: 'low' | 'medium' | 'high';
   dueDate?: Date;
   tags?: string[];
@@ -36,7 +36,7 @@ export const useTasks = (options: UseTasksOptions = {}) => {
   // Convert local task to API task format
   const convertToApiTask = (task: LocalTask): Partial<Task> => ({
     title: task.text,
-    status: task.completed ? 'completed' : 'pending',
+    status: task.status,
     priority: task.priority,
     dueDate: task.dueDate?.toISOString(),
     tags: task.tags || [],
@@ -46,7 +46,7 @@ export const useTasks = (options: UseTasksOptions = {}) => {
   const convertFromApiTask = (task: any): LocalTask => ({
     id: task.id,
     text: task.title,
-    completed: task.status === 'completed',
+    status: task.status || 'pending',
     priority: task.priority,
     // Handle both camelCase and snake_case from API
     dueDate: (task.dueDate || task.due_date) ? new Date(task.dueDate || task.due_date) : undefined,
@@ -85,7 +85,7 @@ export const useTasks = (options: UseTasksOptions = {}) => {
       const apiUpdates: Partial<Task> = {};
       
       if (updates.text !== undefined) apiUpdates.title = updates.text;
-      if (updates.completed !== undefined) apiUpdates.status = updates.completed ? 'completed' : 'pending';
+      if (updates.status !== undefined) apiUpdates.status = updates.status;
       if (updates.priority !== undefined) apiUpdates.priority = updates.priority;
       if (updates.dueDate !== undefined) apiUpdates.dueDate = updates.dueDate.toISOString();
       if (updates.tags !== undefined) apiUpdates.tags = updates.tags;
@@ -124,7 +124,8 @@ export const useTasks = (options: UseTasksOptions = {}) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    await updateTask(taskId, { completed: !task.completed });
+    const newStatus = task.status === 'completed' ? 'pending' : 'completed';
+    await updateTask(taskId, { status: newStatus });
   }, [tasks, updateTask]);
 
   // Get tasks from backend

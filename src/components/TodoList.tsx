@@ -97,7 +97,7 @@ export const TodoList = () => {
     id: task.id,
     title: task.text,
     description: undefined, // LocalTask doesn't have description
-    status: task.completed ? 'completed' : 'pending',
+    status: task.status,
     priority: task.priority === 'high' ? 'high' : task.priority === 'medium' ? 'medium' : 'low',
     dueDate: task.dueDate,
     tags: task.tags,
@@ -124,7 +124,7 @@ export const TodoList = () => {
 
     await updateTask(editingTask.id, {
       text: editingTask.title,
-      completed: editingTask.status === 'completed',
+      status: editingTask.status,
       priority: editingTask.priority === 'urgent' ? 'high' : editingTask.priority,
       dueDate: editingTask.dueDate ? new Date(editingTask.dueDate) : undefined,
       tags: editingTask.tags,

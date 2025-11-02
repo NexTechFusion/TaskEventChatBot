@@ -25,3 +25,10 @@ export {
   quickResearchTool,
   researchTools
 } from './research-tools';
+
+// Mem0 Memory Tools
+export {
+  mem0RememberTool,
+  mem0MemorizeTool,
+  mem0ListMemoriesTool
+} from './mem0-tools';

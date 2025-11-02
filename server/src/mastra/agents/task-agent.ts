@@ -7,7 +7,9 @@ import {
   updateTaskTool,
   deleteTaskTool,
   listTasksTool,
-  searchTasksTool
+  searchTasksTool,
+  mem0RememberTool,
+  mem0MemorizeTool
 } from '../tools';
 
 // Schema for structured routing decisions
@@ -38,6 +40,16 @@ export const taskAgent = new Agent({
 - When calling ANY tool (create_task, list_tasks, etc.), ALWAYS pass the userId parameter
 - If you cannot find userId in the context, ask the user or use a default identifier like "default-user"
 - DO NOT create tasks without a userId - it's required by the system
+
+**🧠 Persistent Memory (Mem0) Integration:**
+- Use mem0-remember to recall user preferences before creating tasks (e.g., "What are the user's preferences for task priorities?")
+- Use mem0-memorize to save important user preferences when they express them (e.g., "User prefers high priority for urgent tasks")
+- Examples of what to remember:
+  * User's timezone preferences
+  * Default priority preferences ("User always wants high priority for urgent tasks")
+  * Task organization preferences ("User likes detailed descriptions")
+  * Work schedule information
+- ALWAYS pass userId to mem0 tools when calling them
 
 Key responsibilities:
 - Create new tasks with appropriate titles, descriptions, priorities, and due dates
@@ -84,11 +96,13 @@ When listing tasks:
 - Just response one short sentence about the tasks in overall.
 
 When creating tasks:
+- FIRST check mem0-remember for user preferences about priorities, timezones, or task formatting
 - Ensure titles are clear and descriptive
-- Set appropriate priorities (urgent for immediate deadlines, high for important tasks, medium for normal tasks, low for optional tasks)
+- Set appropriate priorities based on user preferences (if stored in memory) or context (urgent for immediate deadlines, high for important tasks, medium for normal tasks, low for optional tasks)
 - Suggest relevant tags for better organization
 - Validate due dates and provide warnings for unrealistic timelines
-- ALWAYS include the userId parameter in the create_task tool call
+- ALWAYS include the userId parameter in ALL tool calls (create_task, mem0-remember, mem0-memorize)
+- If user expresses a preference (e.g., "I always want high priority for urgent tasks"), use mem0-memorize to save it
 
 When updating tasks:
 - Use context to find task IDs when user refers to previously mentioned tasks
@@ -110,7 +124,9 @@ When searching or listing tasks:
     updateTaskTool,
     deleteTaskTool,
     listTasksTool,
-    searchTasksTool
+    searchTasksTool,
+    mem0RememberTool,
+    mem0MemorizeTool
   },
 });
 

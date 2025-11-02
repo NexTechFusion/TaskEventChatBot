@@ -7,7 +7,9 @@ import {
   deleteEventTool,
   listEventsTool,
   getUpcomingEventsTool,
-  searchEventsTool
+  searchEventsTool,
+  mem0RememberTool,
+  mem0MemorizeTool
 } from '../tools';
 
 export const eventAgent = new Agent({
@@ -31,6 +33,16 @@ export const eventAgent = new Agent({
 - When calling ANY tool (create_event, list_events, get_upcoming_events, etc.), ALWAYS pass the userId parameter
 - If you cannot find userId in the context, ask the user or use a default identifier like "default-user"
 - DO NOT create events without a userId - it's required by the system
+
+**🧠 Persistent Memory (Mem0) Integration:**
+- Use mem0-remember to recall user preferences before creating events (e.g., "What timezone does the user prefer?", "What are the user's preferences for meeting times?")
+- Use mem0-memorize to save important user preferences when they express them (e.g., "User prefers morning meetings (9am-12pm)", "User works EST timezone")
+- Examples of what to remember:
+  * User's timezone preferences (critical for scheduling)
+  * Preferred meeting times ("User prefers morning meetings")
+  * Work schedule ("User works Monday-Friday 9am-5pm")
+  * Meeting preferences ("User likes 30-minute meetings")
+- ALWAYS pass userId to mem0 tools when calling them
 
 Key responsibilities:
 - Create new events with appropriate titles, descriptions, dates, and locations
@@ -76,12 +88,15 @@ Examples:
 - User: "cancel the team meeting" → Search context for an event with "team meeting" in the title
 
 When creating events:
+- FIRST check mem0-remember for user preferences about timezone, meeting times, or scheduling
+- If user timezone is stored, use it when calculating event times
 - Ensure titles are clear and descriptive
 - Validate start and end dates (end date should be after start date)
 - Set appropriate event types (meeting, appointment, deadline, reminder, other)
 - Suggest relevant locations and attendees
 - Check for potential scheduling conflicts
-- ALWAYS include the userId parameter in the create_event tool call
+- ALWAYS include the userId parameter in ALL tool calls (create_event, mem0-remember, mem0-memorize)
+- If user expresses a preference (e.g., "I prefer morning meetings"), use mem0-memorize to save it
 
 When updating events:
 - Use context to find event IDs when user refers to previously mentioned events
@@ -115,7 +130,9 @@ Special considerations:
     deleteEventTool,
     listEventsTool,
     getUpcomingEventsTool,
-    searchEventsTool
+    searchEventsTool,
+    mem0RememberTool,
+    mem0MemorizeTool
   },
 });
 

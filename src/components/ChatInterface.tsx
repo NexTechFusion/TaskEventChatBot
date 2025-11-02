@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ConnectionStatus, createConnectionMonitor } from "@/lib/connection-status";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
+import { MatrixAvatar } from "./MatrixAvatar";
 
 interface Message extends ChatMessage {
   tasks?: Array<{
@@ -218,8 +219,11 @@ export const ChatInterface = () => {
         </div>
       )}
       
-      <div ref={scrollAreaRef} className="chat-scroll-area flex-1 min-h-0 p-4">
-        <div className="max-w-3xl mx-auto space-y-4">
+      <div ref={scrollAreaRef} className="chat-scroll-area flex-1 min-h-0 p-4 relative">
+        {/* Matrix Avatar Background */}
+        <MatrixAvatar />
+        
+        <div className="max-w-3xl mx-auto space-y-4 relative z-10">
           {/* Show load more button if there are more messages */}
           {messagesToShow < allMessages.length && (
             <div className="text-center py-2">

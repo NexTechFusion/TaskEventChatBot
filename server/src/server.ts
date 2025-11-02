@@ -11,6 +11,7 @@ import { getResearchAgent, conductDeepResearch, enrichResearchPrompt } from './m
 import { initializeDatabase, query } from './config/database';
 import { mastra } from './mastra';
 import { streamAgentNetwork } from './routes/stream';
+import { getAllMemories, deleteMemory } from './mastra/integrations/mem0';
 
 // Load environment variables
 dotenv.config();
@@ -1296,7 +1297,74 @@ app.delete('/api/conversation/history', async (req: Request, res: Response) => {
   }
 });
 
-// Memory endpoints (legacy support)
+// Memory endpoints - using Mem0 integration
+app.get('/api/memory/:userId/all', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    
+    if (!userId) {
+      res.status(400).json({
+        success: false,
+        error: 'userId is required'
+      });
+      return;
+    }
+
+    console.log(`🧠 Fetching all memories for user: ${userId}`);
+    
+    const memories = await getAllMemories(userId);
+    
+    res.json({
+      success: true,
+      data: {
+        memories: memories.map((m: any) => ({
+          id: m.id || m.memory_id || Math.random().toString(),
+          memory: m.memory || m.content || '',
+          metadata: m.metadata || {},
+          created_at: m.created_at || m.timestamp || new Date().toISOString()
+        })),
+        count: memories.length
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching memories:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch memories'
+    });
+  }
+});
+
+app.delete('/api/memory/:userId/:memoryId', async (req: Request, res: Response) => {
+  try {
+    const { userId, memoryId } = req.params;
+    
+    if (!userId || !memoryId) {
+      res.status(400).json({
+        success: false,
+        error: 'userId and memoryId are required'
+      });
+      return;
+    }
+
+    console.log(`🗑️  Deleting memory ${memoryId} for user: ${userId}`);
+    
+    await deleteMemory(memoryId, userId);
+    
+    res.json({
+      success: true,
+      message: 'Memory deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting memory:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete memory'
+    });
+  }
+});
+
+// Legacy memory endpoints (for backward compatibility)
 app.get('/api/memory/:userId', (req: Request, res: Response) => {
   res.json({
     success: true,

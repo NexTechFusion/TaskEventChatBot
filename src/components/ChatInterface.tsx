@@ -11,7 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ConnectionStatus, createConnectionMonitor } from "@/lib/connection-status";
 import ReactMarkdown from "react-markdown";
 import { motion, AnimatePresence } from "framer-motion";
-import { MatrixAvatar } from "./MatrixAvatar";
+import { MatrixAvatar, AvatarState } from "./MatrixAvatar";
+import { MemoryModal } from "./MemoryModal";
 
 interface Message extends ChatMessage {
   tasks?: Array<{
@@ -47,6 +48,7 @@ export const ChatInterface = () => {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('online');
   const [useStreaming, setUseStreaming] = useState(true); // Toggle for streaming mode
   const [messagesToShow, setMessagesToShow] = useState(10); // Show last 10 messages
+  const [memoryModalOpen, setMemoryModalOpen] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -196,6 +198,23 @@ export const ChatInterface = () => {
     }
   }, [messages]);
 
+  // Determine avatar state based on conversation context
+  const getAvatarState = (): AvatarState => {
+    if (connectionStatus === 'offline') return 'offline';
+    if (isStreaming) return 'streaming';
+    if (isLoading) return 'thinking';
+    
+    // Check last message for tasks/events/errors
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage?.error) return 'error';
+    if (lastMessage?.tasks && lastMessage.tasks.length > 0) return 'task-created';
+    if (lastMessage?.events && lastMessage.events.length > 0) return 'event-created';
+    
+    if (messages.length > 0 && !isStreaming && !isLoading) return 'success';
+    
+    return 'idle';
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Connection Status Bar */}
@@ -220,8 +239,21 @@ export const ChatInterface = () => {
       )}
       
       <div ref={scrollAreaRef} className="chat-scroll-area flex-1 min-h-0 p-4 relative">
-        {/* Matrix Avatar Background */}
-        <MatrixAvatar />
+        {/* Matrix Avatar Background - Compact when messages exist, adaptive to state */}
+        <MatrixAvatar 
+          compact={messages.length > 0} 
+          state={getAvatarState()}
+          onClick={() => setMemoryModalOpen(true)}
+        />
+        
+        {/* Memory Modal */}
+        {userId && (
+          <MemoryModal
+            open={memoryModalOpen}
+            onOpenChange={setMemoryModalOpen}
+            userId={userId}
+          />
+        )}
         
         <div className="max-w-3xl mx-auto space-y-4 relative z-10">
           {/* Show load more button if there are more messages */}

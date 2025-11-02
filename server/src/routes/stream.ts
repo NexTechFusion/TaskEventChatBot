@@ -186,11 +186,6 @@ YOU MUST USE THIS DATE AS YOUR REFERENCE POINT!
       }
     });
 
-    console.log('🔍 Workflow result status:', result.status);
-    if (result.status === 'success') {
-      console.log('🔍 Workflow result content:', JSON.stringify(result.result, null, 2));
-    }
-
     let responseMessage = '';
     let actions: any[] = [];
     let agentType = 'unknown';
@@ -199,18 +194,66 @@ YOU MUST USE THIS DATE AS YOUR REFERENCE POINT!
       // Extract response from workflow result
       // @ts-ignore - Type mismatch between workflow result structure
       const workflowResult: any = result.result;
-      const stepResult = workflowResult.handleWithTaskAgent || 
-                        workflowResult.handleWithEventAgent || 
-                        workflowResult.handleWithResearchAgent ||
-                        workflowResult.handleWithBothAgents ||
-                        workflowResult;
       
+      // Try to find the step result - check each handle method explicitly
+      let stepResult = null;
+      const handleKeys = [
+        'handleWithTaskAgent',
+        'handleWithEventAgent', 
+        'handleWithAnswerAgent',
+        'handleWithResearchAgent',
+        'handleWithBothAgents'
+      ];
+      
+      for (const key of handleKeys) {
+        if (workflowResult[key]) {
+          stepResult = workflowResult[key];
+          break;
+        }
+      }
+      
+      // Fallback to workflowResult itself if no handle method found
+      if (!stepResult) {
+        stepResult = workflowResult;
+      }
+      
+      // Extract response, actions, and agent type
       // @ts-ignore - Dynamic property access
-      responseMessage = stepResult.response || stepResult.message || '';
-      // @ts-ignore - Dynamic property access
-      actions = stepResult.actions || [];
-      // @ts-ignore - Dynamic property access
-      agentType = stepResult.agent || 'unknown';
+      responseMessage = stepResult?.response || stepResult?.message || '';
+      
+      // If stepResult is the workflowResult itself, try to find nested response
+      if (!responseMessage && stepResult === workflowResult) {
+        for (const key of Object.keys(workflowResult)) {
+          if (key.startsWith('handleWith') && workflowResult[key]?.response) {
+            responseMessage = workflowResult[key].response;
+            // @ts-ignore - Dynamic property access
+            actions = workflowResult[key].actions || [];
+            // @ts-ignore - Dynamic property access
+            agentType = workflowResult[key].agent || 'unknown';
+            break;
+          }
+        }
+      }
+      
+      // Final extraction if still empty
+      if (!responseMessage) {
+        // @ts-ignore - Dynamic property access
+        responseMessage = stepResult?.response || stepResult?.message || '';
+        // @ts-ignore - Dynamic property access
+        actions = stepResult?.actions || [];
+        // @ts-ignore - Dynamic property access
+        agentType = stepResult?.agent || 'unknown';
+      } else {
+        // Extract actions and agent type if we found response but haven't set these yet
+        if (!actions || actions.length === 0) {
+          // @ts-ignore - Dynamic property access
+          actions = stepResult?.actions || [];
+        }
+        if (agentType === 'unknown') {
+          // @ts-ignore - Dynamic property access
+          agentType = stepResult?.agent || 'unknown';
+        }
+      }
       
       // Send agent execution completion
       const agentLabel = 
@@ -218,6 +261,7 @@ YOU MUST USE THIS DATE AS YOUR REFERENCE POINT!
         agentType === 'task' ? 'TaskAgent' : 
         agentType === 'event' ? 'EventAgent' : 
         agentType === 'research' ? 'ResearchAgent' : 
+        agentType === 'answer' ? 'AnswerAgent' :
         'Agent';
       
       const actionLabel = 
@@ -225,6 +269,7 @@ YOU MUST USE THIS DATE AS YOUR REFERENCE POINT!
         agentType === 'task' ? 'Executing task agent' : 
         agentType === 'event' ? 'Executing event agent' : 
         agentType === 'research' ? 'Conducting deep research with web search' : 
+        agentType === 'answer' ? 'Answering general knowledge question' :
         'Processing request';
       
       res.write(`data: ${JSON.stringify({ 
@@ -237,8 +282,6 @@ YOU MUST USE THIS DATE AS YOUR REFERENCE POINT!
           timestamp: new Date().toISOString()
         }
       })}\n\n`);
-      
-      console.log('✅ Extracted response:', responseMessage.substring(0, 100));
       
       // Send tool execution step if actions were performed
       if (actions && actions.length > 0) {

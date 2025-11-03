@@ -1,7 +1,14 @@
 version: '3.8'
 
+# Railway-compatible Docker Compose
+# When importing this repo to Railway, it will automatically detect this file
+# and deploy all 3 services (database, backend, frontend)
+# NOTE: Railway recommends using managed PostgreSQL instead of the included database service
+
 services:
   # PostgreSQL Database
+  # OPTIONAL: Railway provides managed PostgreSQL which is recommended
+  # To use Railway's managed PostgreSQL, remove this service and add it in Railway dashboard
   database:
     image: pgvector/pgvector:pg16
     container_name: taskbot-database
@@ -33,20 +40,24 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PORT: 3001
+      # Railway sets PORT automatically, fallback to 3001 for local Docker
+      PORT: ${PORT:-3001}
       
       # Database configuration
-      POSTGRES_HOST: database
-      POSTGRES_PORT: 5432
+      # If using included database service, these default to database:5432
+      # If using Railway's managed PostgreSQL, Railway auto-injects these variables
+      POSTGRES_HOST: ${POSTGRES_HOST:-database}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
       POSTGRES_DB: ${POSTGRES_DB:-task_track_bot}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@database:5432/${POSTGRES_DB:-task_track_bot}
+      # DATABASE_URL will be constructed from individual vars if not provided
+      DATABASE_URL: ${DATABASE_URL}
       
       # OpenAI API Key (required for AI features)
       OPENAI_API_KEY: ${OPENAI_API_KEY}
     ports:
-      - "${BACKEND_PORT:-3001}:3001"
+      - "${PORT:-${BACKEND_PORT:-3001}}:${PORT:-3001}"
     depends_on:
       database:
         condition: service_healthy
@@ -56,7 +67,7 @@ services:
       # Mount logs directory for debugging (optional)
       - backend_logs:/app/logs
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\""]
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:${PORT:-3001}/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\""]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -69,8 +80,12 @@ services:
       dockerfile: docker/frontend.Dockerfile
     container_name: taskbot-frontend
     restart: unless-stopped
+    environment:
+      # Frontend should use Railway's public URL for backend
+      # Railway will inject RAILWAY_PUBLIC_DOMAIN or you can set VITE_API_URL
+      VITE_API_URL: ${VITE_API_URL:-${RAILWAY_PUBLIC_DOMAIN}}
     ports:
-      - "${FRONTEND_PORT:-80}:80"
+      - "${PORT:-${FRONTEND_PORT:-80}}:80"
     depends_on:
       - backend
     networks:

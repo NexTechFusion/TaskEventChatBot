@@ -7,7 +7,7 @@ WORKDIR /app
 COPY server/package*.json ./
 
 # Install dependencies
-RUN npm ci --prefer-offline --no-audit
+RUN npm ci --prefer-offline --no-audit --legacy-peer-deps
 
 # Copy source code
 COPY server/ ./
@@ -24,7 +24,7 @@ WORKDIR /app
 COPY server/package*.json ./
 
 # Install production dependencies only
-RUN npm ci --prefer-offline --no-audit --omit=dev
+RUN npm ci --prefer-offline --no-audit --omit=dev --legacy-peer-deps
 
 # Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
